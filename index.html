@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meropenem Serum Düzeyi Tahmin Aracı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue-dark:   #0b3d6e;
+    --blue-mid:    #1560a8;
+    --blue-light:  #3b8de0;
+    --blue-pale:   #ddeeff;
+    --green:       #1a7a4a;
+    --green-light: #d4f0e2;
+    --red:         #c0392b;
+    --red-light:   #fde8e6;
+    --amber:       #b96a00;
+    --amber-light: #fff0d6;
+    --bg:          #f2f6fb;
+    --surface:     #ffffff;
+    --border:      #dbe6f4;
+    --text:        #1a2535;
+    --muted:       #6b7c93;
+    --mono:        'JetBrains Mono', monospace;
+    --sans:        'Sora', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 20px 60px;
+  }
+
+  /* ── Header ────────────────────────────────────────── */
+  .header {
+    max-width: 960px;
+    margin: 0 auto 28px;
+    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 60%, var(--blue-light) 100%);
+    border-radius: 18px;
+    padding: 32px 36px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(11,61,110,0.28);
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; right: 80px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .header-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .header p {
+    font-size: 0.88rem;
+    font-weight: 300;
+    opacity: 0.82;
+    max-width: 560px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ─────────────────────────────────────────── */
+  .layout {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* ── Input Card ─────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 26px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    border: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--blue-mid);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--blue-pale);
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    color: var(--text);
+    background: #f8fafd;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--blue-light);
+    box-shadow: 0 0 0 3px rgba(59,141,224,0.15);
+    background: white;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7c93' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .field .hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1.5px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .btn-calc {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--blue-mid), var(--blue-dark));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 14px rgba(11,61,110,0.3);
+    transition: transform 0.15s, box-shadow 0.2s;
+    margin-top: 4px;
+  }
+  .btn-calc:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(11,61,110,0.4);
+  }
+  .btn-calc:active { transform: translateY(0); }
+
+  .disclaimer {
+    margin-top: 16px;
+    font-size: 0.73rem;
+    color: var(--muted);
+    background: #f8fafd;
+    border-left: 3px solid var(--blue-light);
+    padding: 10px 12px;
+    border-radius: 0 8px 8px 0;
+    line-height: 1.5;
+  }
+
+  /* ── Results ─────────────────────────────────────────── */
+  .results-col { display: flex; flex-direction: column; gap: 16px; }
+
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .metric {
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1px solid transparent;
+    transition: transform 0.2s;
+  }
+  .metric:hover { transform: translateY(-2px); }
+  .metric.gfr   { background: var(--blue-pale);  border-color: #b8d8f8; }
+  .metric.logit { background: var(--amber-light); border-color: #f5d6a0; }
+  .metric.prob  { background: #eef7f0;            border-color: #b8e2c8; }
+
+  .metric-label {
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 1.8rem;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--text);
+  }
+  .metric-unit {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  /* ── Probability Bar ────────────────────────────────── */
+  .prob-card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 20px 22px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .prob-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .prob-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+  .prob-pct {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .bar-track {
+    background: #e8edf5;
+    border-radius: 20px;
+    height: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    position: relative;
+  }
+  .bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+    border-radius: inherit;
+  }
+  .threshold-line {
+    position: absolute;
+    left: 50%;
+    top: -3px; bottom: -3px;
+    width: 2px;
+    background: rgba(0,0,0,0.18);
+    border-radius: 2px;
+  }
+  .bar-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  /* ── Verdict ─────────────────────────────────────────── */
+  .verdict {
+    border-radius: 14px;
+    padding: 22px 26px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    border: 1.5px solid transparent;
+    transition: transform 0.2s;
+  }
+  .verdict.reached {
+    background: var(--green-light);
+    border-color: #8ecfb0;
+    box-shadow: 0 4px 18px rgba(26,122,74,0.12);
+  }
+  .verdict.not-reached {
+    background: var(--red-light);
+    border-color: #e8a09a;
+    box-shadow: 0 4px 18px rgba(192,57,43,0.12);
+  }
+  .verdict-icon {
+    font-size: 2.4rem;
+    flex-shrink: 0;
+  }
+  .verdict-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .verdict.reached  .verdict-title { color: var(--green); }
+  .verdict.not-reached .verdict-title { color: var(--red); }
+  .verdict-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  /* ── Formula card ────────────────────────────────────── */
+  .formula-card {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 18px 22px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .formula-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .formula-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.83rem;
+  }
+  .formula-row:last-child { border-bottom: none; }
+  .formula-key {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--blue-mid);
+    min-width: 90px;
+  }
+  .formula-eq {
+    color: var(--muted);
+    font-size: 0.82rem;
+    flex: 1;
+  }
+  .formula-val {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--text);
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* ── Empty state ─────────────────────────────────────── */
+  .empty-state {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 60px 30px;
+    text-align: center;
+    border: 1.5px dashed var(--border);
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 14px; opacity: 0.4; }
+  .empty-text { font-size: 0.9rem; font-weight: 400; }
+
+  /* ── Animations ──────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .animate { animation: fadeUp 0.35s ease forwards; }
+  .animate.d1 { animation-delay: 0.05s; }
+  .animate.d2 { animation-delay: 0.12s; }
+  .animate.d3 { animation-delay: 0.19s; }
+  .animate.d4 { animation-delay: 0.26s; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-badge">Klinik Karar Destek Aracı</div>
+  <h1>Meropenem Serum Düzeyi Tahmini</h1>
+  <p>Cockroft-Gault GFR ve lojistik regresyon modeline dayalı hedef serum düzeyi öngörü aracı &mdash; Meropenem >4× MIC</p>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- INPUT CARD -->
+  <div class="card">
+    <div class="section-label">Hasta Bilgileri</div>
+
+    <div class="field">
+      <label for="yas">Yaş</label>
+      <input type="number" id="yas" value="65" min="18" max="120" step="1">
+      <div class="hint">18–120 yıl</div>
+    </div>
+
+    <div class="field">
+      <label for="cinsiyet">Cinsiyet</label>
+      <select id="cinsiyet">
+        <option value="0">Erkek</option>
+        <option value="1">Kadın</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="agirlik">Ağırlık (kg)</label>
+      <input type="number" id="agirlik" value="70" min="10" max="250" step="0.5">
+    </div>
+
+    <div class="field">
+      <label for="kreatinin">Kreatinin (mg/dL)</label>
+      <input type="number" id="kreatinin" value="1.0" min="0.1" max="20" step="0.1">
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Tedavi Protokolü</div>
+
+    <div class="field">
+      <label for="yukleme">6 g/24 saat yükleme dozu</label>
+      <select id="yukleme">
+        <option value="0">Hayır — Standart doz</option>
+        <option value="1">Evet — Yükleme dozu uygulandı</option>
+      </select>
+    </div>
+
+    <button class="btn-calc" onclick="hesapla()">Hesapla</button>
+
+    <div class="disclaimer">
+      ⚠️ Bu araç yalnızca klinik karar desteği amacıyla geliştirilmiştir. Tedavi kararları her zaman klinisyen değerlendirmesiyle alınmalıdır.
+    </div>
+  </div>
+
+  <!-- RESULTS COLUMN -->
+  <div class="results-col" id="results">
+    <div class="empty-state">
+      <div class="empty-icon">🔬</div>
+      <div class="empty-text">Hasta bilgilerini girerek <strong>Hesapla</strong>'ya tıklayın</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function hesapla() {
+  const yas       = parseFloat(document.getElementById('yas').value);
+  const cinsiyet  = parseFloat(document.getElementById('cinsiyet').value);
+  const agirlik   = parseFloat(document.getElementById('agirlik').value);
+  const kreatinin = parseFloat(document.getElementById('kreatinin').value);
+  const yukleme   = parseFloat(document.getElementById('yukleme').value);
+
+  if ([yas, cinsiyet, agirlik, kreatinin, yukleme].some(isNaN)) {
+    alert('Lütfen tüm alanları eksiksiz doldurun.');
+    return;
+  }
+
+  // ── Cockroft-Gault GFR ──────────────────────────────
+  const gfr = cinsiyet === 0
+    ? ((140 - yas) * agirlik) / (72 * kreatinin)
+    : ((140 - yas) * agirlik * 0.85) / (72 * kreatinin);
+
+  // ── Logit skoru ─────────────────────────────────────
+  const logit = -0.828 + yas * 0.013 - gfr * 0.007 + yukleme * 0.971;
+
+  // ── Olasılık ────────────────────────────────────────
+  const prob = Math.exp(logit) / (1 + Math.exp(logit));
+  const probPct = (prob * 100).toFixed(1);
+
+  // ── Tahmin ──────────────────────────────────────────
+  const reached = logit >= -0.1443;
+
+  const barColor   = reached ? '#1a7a4a' : '#c0392b';
+  const verdictCls = reached ? 'reached' : 'not-reached';
+  const icon       = reached ? '✅' : '❌';
+  const verdLabel  = reached ? 'Hedef düzeye ulaşıldı' : 'Hedef düzeye ulaşılamadı';
+  const verdSub    = `Logit = ${logit.toFixed(4)}  |  Eşik: −0.1443  |  Olasılık: ${probPct}%`;
+
+  const html = `
+    <div class="metric-row animate d1">
+      <div class="metric gfr">
+        <div class="metric-label">GFR (Cockroft-Gault)</div>
+        <div class="metric-value">${gfr.toFixed(1)}</div>
+        <div class="metric-unit">mL / dak</div>
+      </div>
+      <div class="metric logit">
+        <div class="metric-label">Logit Skoru</div>
+        <div class="metric-value" style="font-size:1.45rem">${logit.toFixed(4)}</div>
+        <div class="metric-unit">Eşik: −0.1443</div>
+      </div>
+      <div class="metric prob">
+        <div class="metric-label">Olasılık</div>
+        <div class="metric-value">${probPct}%</div>
+        <div class="metric-unit">Hedef düzey</div>
+      </div>
+    </div>
+
+    <div class="prob-card animate d2">
+      <div class="prob-header">
+        <div class="prob-title">Olasılık Göstergesi</div>
+        <div class="prob-pct" style="color:${barColor}">${probPct}%</div>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${probPct}%; background:${barColor}"></div>
+        <div class="threshold-line"></div>
+      </div>
+      <div class="bar-labels"><span>0%</span><span>50% (eşik)</span><span>100%</span></div>
+    </div>
+
+    <div class="verdict ${verdictCls} animate d3">
+      <div class="verdict-icon">${icon}</div>
+      <div>
+        <div class="verdict-title">${verdLabel}</div>
+        <div class="verdict-sub">${verdSub}</div>
+      </div>
+    </div>
+
+    <div class="formula-card animate d4">
+      <div class="formula-title">Hesaplama Detayları</div>
+      <div class="formula-row">
+        <div class="formula-key">GFR</div>
+        <div class="formula-eq">${cinsiyet===0
+          ? `((140 − ${yas}) × ${agirlik}) / (72 × ${kreatinin})`
+          : `((140 − ${yas}) × ${agirlik} × 0.85) / (72 × ${kreatinin})`}</div>
+        <div class="formula-val">${gfr.toFixed(2)}</div>
+      </div>
+      <div class="formula-row">
+        <div class="formula-key">Logit</div>
+        <div class="formula-eq">−0.828 + ${yas}×0.013 − ${gfr.toFixed(2)}×0.007 + ${yukleme}×0.971</div>
+        <div class="formula-val">${logit.toFixed(4)}</div>
+      </div>
+      <div class="formula-row">
+        <div class="formula-key">Olasılık</div>
+        <div class="formula-eq">e^(logit) / (1 + e^(logit))</div>
+        <div class="formula-val">${prob.toFixed(4)}</div>
+      </div>
+      <div class="formula-row">
+        <div class="formula-key">Karar</div>
+        <div class="formula-eq">Logit ${reached ? '≥' : '<'} −0.1443</div>
+        <div class="formula-val" style="color:${barColor}">${reached ? 'Ulaşıldı' : 'Ulaşılamadı'}</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('results').innerHTML = html;
+}
+
+// Sayfa açılınca otomatik hesapla
+hesapla();
+</script>
+</body>
+</html>
